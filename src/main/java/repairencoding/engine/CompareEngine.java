@@ -42,32 +42,57 @@ public class CompareEngine {
         List<TLine> lines1=pre.getLines();
         List<TLine> lines2=next.getLines();
         int p2=0;
+        int[] outK=new int[1];
+        int seqenceLost=0;
         for (int i=0;i<lines1.size();i++) {
             log.trace("Progress {}/{} history items", i+1, lines1.size());
             TLine myLine=lines1.get(i);
-            int p =searchLine(myLine.line, lines2, p2, i);
+            int p =searchLine(myLine.line, lines2, p2, i, outK);
+            int thisK = outK[0];
             if (p!=TConst.UNDEFINED && p>=0) {
                 if (p2!=p) {
                     log.trace(" new offset {} > {}", i, p);
                     p2=p;
                 }
                 myLine.nextPos=p;
+                boolean applyPatch = true;
                 if (lines2.get(p).prePos!=TConst.UNDEFINED && lines2.get(p).prePos!=i) {
-                    log.warn("i={} and pos={} \"{}\" link to already linked: next line {} \"{}\" link to {}", 
-                            i,myLine.pos, myLine.line, p,lines2.get(p).line,lines2.get(p).prePos);
+                    if (lines2.get(p).preK > thisK) {
+                        log.debug("i={} and pos={} link to already linked: next line {} link to {} with k={} > that new k={} (overwrite)",
+                                i,myLine.pos, p, lines2.get(p).prePos, lines2.get(p).preK, thisK);
+                    } else if (lines2.get(p).preK < thisK) {
+                        log.debug("i={} and pos={} link to already linked: next line {} link to {} with k={} < that new k={} (ignore this backlink)",
+                                i,myLine.pos, p, lines2.get(p).prePos, lines2.get(p).preK, thisK);
+                        applyPatch = false;
+                    } else {
+                        log.warn("i={} and pos={} \"{}\" link to already linked: next line {} \"{}\" link to {}. Has same k={}",
+                                i, myLine.pos, myLine.line, p, lines2.get(p).line, lines2.get(p).prePos, thisK);
+                    }
                 }
-                lines2.get(p).prePos=i;
-                if (i!=myLine.pos) 
-                    log.warn("i={} and pos={} not match! At line \"{}\"", i,myLine.pos, myLine.line);
+                if (applyPatch) {
+                    lines2.get(p).prePos = i;
+                    lines2.get(p).preK = thisK;
+                    if (i != myLine.pos)
+                        log.warn("i={} and pos={} not match! At line \"{}\"", i, myLine.pos, myLine.line);
+                }
+
+                if (seqenceLost>searchWindow1*3) {
+                    log.debug("i={}, found p={} after lost search window", i,p);
+                }
+                seqenceLost=0;
             } else {
                 log.trace("i={} pos={} not found position", i, p);
+                seqenceLost++;
+                if (seqenceLost==searchWindow1*3) {
+                    log.debug("i={}, p={} lost search window, next position search may be not correct", i,p);
+                }
             }
             p2++;
         }
     }
 
     // TODO hard method. Need more unit test!    
-    private int searchLine(String text, List<TLine> inLines, int nearPos1, int nearPos2) {
+    private int searchLine(String text, List<TLine> inLines, int nearPos1, int nearPos2, int[] outK) {
         int result=TConst.UNDEFINED, resultD=Integer.MAX_VALUE;
         for (int fromPos: new int[]{nearPos1,nearPos2}) {
            if (fromPos==TConst.UNDEFINED) continue;
@@ -77,7 +102,10 @@ public class CompareEngine {
                int p=fromPos+d;
                if (0<= p && p <inLines.size() ) {
                     int k = stringDiff(text, inLines.get(p).line);
-                    k+=Math.min(16,Math.min(Math.abs(p-nearPos1),Math.abs(p-nearPos2))/50);
+                    if (k<=DIFF_TRESHOLD_1*3) {
+                        k+=+Math.min(20,d/40);
+                        k+=Math.min(16,Math.min(Math.abs(p-nearPos1),Math.abs(p-nearPos2))/50);
+                    }
                     if (resultD>k) {
                         result=p;
                         resultD=k;
@@ -86,8 +114,11 @@ public class CompareEngine {
                if (d!=0){
                    p=fromPos-d;
                     if (0<= p && p <inLines.size() ) {
-                         int k = stringDiff(text, inLines.get(p).line) +Math.min(20,d/40);
-                         k+=Math.min(16,Math.min(Math.abs(p-nearPos1),Math.abs(p-nearPos2))/50);
+                         int k = stringDiff(text, inLines.get(p).line);
+                         if (k<=DIFF_TRESHOLD_1*3) {
+                             k+=+Math.min(20,d/40);
+                            k+=Math.min(16,Math.min(Math.abs(p-nearPos1),Math.abs(p-nearPos2))/50);
+                         }
                          if (resultD>k) {
                              result=p;
                              resultD=k;
@@ -97,6 +128,9 @@ public class CompareEngine {
                if (resultD==0 || resultD<DIFF_TRESHOLD_2 && d>3 && d < searchWindow2) // far = 14
                    break; // stop search - it is best.
            }
+        }
+        if (outK!=null) {
+            outK[0]=resultD;
         }
         if (resultD>DIFF_TRESHOLD_1)
             return -1; // not found
@@ -172,11 +206,15 @@ todo count by symbols diff
             int p=Arrays.binarySearch(allowed, c);
             if (p>=0) deltaV2[p]++;
         }
-        int s=0;
+        long s=0;
         for (int i=0;i<deltaV2.length;i++) {
             s+= Math.abs(deltaV1[i]-deltaV2[i]);
         }
+        if (s>Integer.MAX_VALUE) return Integer.MAX_VALUE;
         s = s *300 / l1.length();
-        return s+10 + lenDiff/3;
+        s = s+10 + lenDiff/3;
+        if (s>Integer.MAX_VALUE-1000) return Integer.MAX_VALUE-100;
+        assert s>=0 && s<=Integer.MAX_VALUE;
+        return (int)s;
     }
 }

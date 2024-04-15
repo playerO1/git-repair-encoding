@@ -10,6 +10,7 @@ public class TLine {
     
     public boolean hasBroken;
     public int prePos;
+    public int preK;
     public int nextPos;
 
     
@@ -17,7 +18,7 @@ public class TLine {
     /// --- API ---
     @Override
     public String toString() {
-        return "TLine{" + "pos=" + pos + ", line=" + line + ", hasBroken=" + hasBroken + ", prePos=" + prePos + ", nextPos=" + nextPos + '}';
+        return "TLine{" + "pos=" + pos + ", line=" + line + ", hasBroken=" + hasBroken + ", prePos=" + prePos + ", preK=" + preK + ", nextPos=" + nextPos + '}';
     }
     
 }
