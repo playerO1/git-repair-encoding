@@ -15,7 +15,7 @@ Usage
 
     java -Xmx200m -Dorg.slf4j.simpleLogger.defaultLogLevel=debug -jar git-repair-encoding.jar path_with_text_files
 
-Programm will scan all fiels from path_with_text_files, ordered by modify time.
+Program will scan all files from path_with_text_files, ordered by modify time.
 Compare files between.
 Make output file diff.html for show how to detect line numbers.
 Make output file out.txt with repair last file item. Or do not make it, if all string was good.
@@ -27,6 +27,7 @@ Build
 Use maven.
 
 > cd git-repair-encoding/
+
 > mvn package
 
 What this utilite doing?
@@ -75,7 +76,7 @@ TODO list
 ---------
 First version of "git-repair-encoding" can work only with text files in folder, without Git. Tested only on 2 languages and 2 encodings. Funute feature will be nice:
 
-1. improvement search alhorithm: should use more strong logic. See: 
+1. improvement search alhorithm - should use more strong logic. See: Levenshtein distance, Damerau–Levenshtein distance, Jaro–Winkler distance.
 2. add more configurable options: search window size
 3. add support to more encoding, languages
 4. add Git repository support. See: org.eclipse.jgit library
@@ -85,7 +86,7 @@ Project structure
 -----------------
 * Language: Java 1.8
 * Build: maven
-* src - source code of peoject
+* src - source code of project
 
 Using external library:
 
@@ -93,7 +94,7 @@ Using external library:
 * 'slf4j-simple' for control debug output console spam
 * 'junit 4' for unit test
 
-Programm package:
+Program package:
 * types - data structure
 * engine - class for compare and repair broken files
 * loader - input read

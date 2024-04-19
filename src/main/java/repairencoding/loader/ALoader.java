@@ -111,7 +111,7 @@ public abstract class ALoader implements ILoader, Closeable{
             log.trace("Loader String minimalization stat: {} new, {} repeat", 
                     compressStatNew, compressStatRepeat);
         }
-        log.debug("Loader ");
+        log.trace("Loader closed");
     }
     
     

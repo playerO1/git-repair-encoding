@@ -50,10 +50,10 @@ public class DiffVisualization {
             for (TFile item:historySeq) {
                 String name=escape(item.name);
                 if (useAnchor) {
-                    name="<a href='#_table_%s'>%s</a>".formatted(toAnchorStr(name), name);
+                    name=String.format("<a href='#_table_%s'>%s</a>", toAnchorStr(name), name);
                 }
-                w.println("<li>%s   (modified %s, %s encoding)</li>"
-                        .formatted(name, item.time, escape(item.encoding)));
+                w.println(String.format("<li>%s   (modified %s, %s encoding)</li>",
+                        name, item.time, escape(item.encoding)));
             }
             w.println("</ul></p>");
             w.println("</div>");
@@ -65,10 +65,10 @@ public class DiffVisualization {
                 String preFileName=itemI>0?historySeq.get(itemI-1).name:null;
                 String nextFileName=itemI+1<historySeq.size()?historySeq.get(itemI+1).name:null;
                 if (useAnchor) {
-                    w.println("File <span id=\"_table_%s\">&laquo;%s&raquo;</span> (%s)"
-                            .formatted(anhorIndex.get(item.name),item.name, item.encoding));
+                    w.println(String.format("File <span id=\"_table_%s\">&laquo;%s&raquo;</span> (%s)"
+                            , anhorIndex.get(item.name),item.name, item.encoding));
                 } else {
-                    w.println("File &laquo;%s&raquo; (%s)".formatted(item.name, item.encoding));
+                    w.println(String.format("File &laquo;%s&raquo; (%s)", item.name, item.encoding));
                 }
                 w.println("<table class=\"file_content\">"
                         + "<tr><th>pre n</th><th>n</th><th>text line</th><th>next n</th></tr>");
@@ -77,9 +77,9 @@ public class DiffVisualization {
                     if (useAnchor) {
                         String anhor=anhorIndex.get(item.name)+"_"+(lineI.pos+1);
                         if (lineI.hasBroken) {
-                            w.print("<tr id=\"%s\" class=\"broken_line\">".formatted(anhor));
+                            w.print(String.format("<tr id=\"%s\" class=\"broken_line\">", anhor));
                         } else {
-                            w.print("<tr id=\"%s\">".formatted(anhor));
+                            w.print(String.format("<tr id=\"%s\">", anhor));
                         }
                     } else {
                         if (lineI.hasBroken) {
@@ -88,11 +88,11 @@ public class DiffVisualization {
                             w.print("<tr>");
                         }
                     }
-                    w.print("<td title=\"%s\">".formatted(preFileName));
+                    w.print(String.format("<td title=\"%s\">", preFileName));
                     if (lineI.prePos!=TConst.UNDEFINED) {
                         if (useAnchor) {
                             int p=lineI.prePos+1;
-                            w.print("<a href='#%s_%d'>%d</a>".formatted(anhorIndex.get(preFileName),p,p));
+                            w.print(String.format("<a href='#%s_%d'>%d</a>", anhorIndex.get(preFileName),p,p));
                         } else {
                             w.print(lineI.prePos+1);
                         }
@@ -106,11 +106,11 @@ public class DiffVisualization {
                     
                     w.print("<td>");w.print(escape(lineI.line));w.print("</td>");
                     
-                    w.print("<td title=\"%s\">".formatted(nextFileName));
+                    w.print(String.format("<td title=\"%s\">", nextFileName));
                     if (lineI.nextPos!=TConst.UNDEFINED) {
                         if (useAnchor) {
                             int p=lineI.nextPos+1;
-                            w.print("<a href='#%s_%d'>%d</a>".formatted(anhorIndex.get(nextFileName),p,p));
+                            w.print(String.format("<a href='#%s_%d'>%d</a>", anhorIndex.get(nextFileName),p,p));
                         } else {
                             w.print(lineI.nextPos+1);
                         }

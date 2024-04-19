@@ -193,6 +193,37 @@ todo count by symbols diff
 Расстояние Левенштейна / сходство Джаро — Винклера / Расстояние Хэмминга / Расстояние Дамерау — Левенштейна 
 , с учётом битых символов.
 */
+/*
+Расстояние Дамерау — Левенштейна  (https://ru.wikipedia.org/w/index.php?title=%D0%A0%D0%B0%D1%81%D1%81%D1%82%D0%BE%D1%8F%D0%BD%D0%B8%D0%B5_%D0%94%D0%B0%D0%BC%D0%B5%D1%80%D0%B0%D1%83_%E2%80%94_%D0%9B%D0%B5%D0%B2%D0%B5%D0%BD%D1%88%D1%82%D0%B5%D0%B9%D0%BD%D0%B0&oldid=100038662  Creative commons CC-BY-SA )
+int Damerau_Levenshtein_distance(String str1, String str2):
+    int lenstr1 = s1.length();
+    int lenstr2 = s2.length();
+    char s1[]=str.toCharArray(), s2[]=str.toCharArray();
+    d = {}
+    for (int i=-1;i<lenstr1+1;i++):
+        d[(i,-1)] = i+1
+    for (int j=-1;j<lenstr2+1;j++):
+        d[(-1,j)] = j+1
+ 
+    int cost=0;
+    for (int i=0;i<lenstr1;i++)
+        for (int j=0;j<lenstr2;j++){
+            if s1[i] == s2[j]:
+                cost = 0
+            else:
+                cost = 1
+            d[(i,j)] = min(
+                           d[(i-1,j)] + 1, # deletion
+                           d[(i,j-1)] + 1, # insertion
+                           d[(i-1,j-1)] + cost, # substitution
+                          )
+            if (i>0&&j>0&& s1[i] == s2[j-1] and s1[i-1] == s2[j]){
+                d[(i,j)] = min(d[(i,j)], d[i-2,j-2] + 1) # transposition
+            }
+ 
+    return d[lenstr1-1,lenstr2-1];
+}
+*/
 
         l1=l1.toUpperCase();
         l2=l2.toUpperCase();
