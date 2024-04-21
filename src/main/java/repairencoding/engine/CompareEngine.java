@@ -1,12 +1,17 @@
 package repairencoding.engine;
 
 import java.util.Arrays;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import repairencoding.types.TConst;
 import repairencoding.types.TFile;
 import repairencoding.types.TLine;
+import repairencoding.types.TUtil;
 
 /**
  * Mark lines, search modify and link files in sequence
@@ -23,11 +28,38 @@ public class CompareEngine {
     public void process(List<TFile> historySeq) {
         if (historySeq.size()<2)
             throw new IllegalArgumentException("History sequence should have 2 or more files.");
-        for (TFile f:historySeq) {
-            markBrokenLines(f);
-        }
-        for (int i=1;i<historySeq.size();i++) {
-            linkFiles(historySeq.get(i-1), historySeq.get(i));
+        if (TUtil.MT_THREAD_COUNT<=1) {
+            for (TFile f:historySeq) {
+                markBrokenLines(f);
+            }
+            for (int i=1;i<historySeq.size();i++) {
+                linkFiles(historySeq.get(i-1), historySeq.get(i));
+            }
+        } else {
+            log.debug("Search with {} thread", TUtil.MT_THREAD_COUNT);
+            ExecutorService executor = TUtil.newExecutor("Searcher", historySeq.size());
+            try {
+                List<Future<?>> wait=new LinkedList<>();
+                for (int fn=0;fn<historySeq.size();fn++) {
+                    final int i=fn;
+                    wait.add(executor.submit(()-> {
+                        TFile f=historySeq.get(i);
+                        markBrokenLines(f);
+                        if (i>0) {
+                            linkFiles(historySeq.get(i-1), f);
+                        }
+                        return null; 
+                    }));
+                }
+                for (Future<?> tf:wait)tf.get();
+            } catch (InterruptedException ex) {
+                    Thread.currentThread().interrupt();
+            } catch (ExecutionException ex) {
+                log.error("Error at multithread loading: {}", ex.toString());
+                throw new RuntimeException(ex);
+            } finally {
+                executor.shutdownNow();
+            }
         }
     }
 

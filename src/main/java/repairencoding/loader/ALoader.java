@@ -9,6 +9,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 import org.apache.any23.encoding.TikaEncodingDetector;
 import org.slf4j.Logger;
@@ -26,14 +28,40 @@ public abstract class ALoader implements ILoader, Closeable{
     /**
      * Memory optimization for same string
      */
-    protected boolean compressString=true;
-    private Map<String,String> stringCompressor;
+    protected final boolean compressString;
+    private final Map<String,String> stringCompressor;
+    // stats:
     private int compressStatNew, compressStatRepeat;
+    /**
+     * true multithread statistic. But can be slow.
+     * Are you sure that need slow perfomance for true log trace?
+     */
+    private final AtomicInteger compressStatANew, compressStatARepeat;
     
     protected TikaEncodingDetector tEncodingDetector=new TikaEncodingDetector();
     
     protected String primaryEncoding=TConst.DEFAULT_ENODING;
-    
+
+    public ALoader(boolean compressString0, boolean concurrent) {
+        this.compressString=compressString0;
+        if (compressString) {
+            log.trace("Loader using String memory minimalization (like intern). Support MT: {}",concurrent);
+            if (concurrent) {
+                stringCompressor=new ConcurrentHashMap<>();
+                compressStatANew=new AtomicInteger(0);
+                compressStatARepeat=new AtomicInteger(0);
+            } else {
+                compressStatNew = compressStatRepeat = 0;
+                stringCompressor=new HashMap<>();
+                compressStatARepeat=null;
+                compressStatANew=null;
+            }
+        } else {
+            stringCompressor=null;
+            compressStatARepeat=null;
+            compressStatANew=null;
+        }
+    }
     
     protected TFile readFile(String name, long timestamp, IFileStreamGetter isCreator) throws IOException {
         log.debug("Read file \"{}\", timestamp={}", name, timestamp);
@@ -70,19 +98,18 @@ public abstract class ALoader implements ILoader, Closeable{
     
     protected String strIntern(String s) {
         if (compressString) {
-            if (stringCompressor==null) {
-                log.trace("Loader using String memory minimalization (like intern)");
-                stringCompressor=new HashMap<>();
-                compressStatNew = compressStatRepeat = 0;
-            }
+            if (s==null) return null;// never on this programm
             // return s.intern() - bad way - it is temp text. Do not use JVM string cache
-            String exist=stringCompressor.get(s);
+            String exist=stringCompressor.putIfAbsent(s, s);
             if (exist==null) {
-                stringCompressor.put(s, s);
-                compressStatNew++;
+                if (compressStatANew==null)
+                     compressStatNew++;
+                else compressStatANew.incrementAndGet();
                 return s;
             } else {
-                compressStatRepeat++;
+                if (compressStatARepeat==null)
+                     compressStatRepeat++;
+                else compressStatARepeat.incrementAndGet();
                 return exist;
             }
         } else
@@ -106,10 +133,15 @@ public abstract class ALoader implements ILoader, Closeable{
 
     @Override
     public void close() throws IOException {
-        stringCompressor = null;
         if (compressString) {
+            if (compressStatANew!=null) {
+                compressStatNew = compressStatANew.get();
+                compressStatRepeat = compressStatARepeat.get();
+            }
             log.trace("Loader String minimalization stat: {} new, {} repeat", 
                     compressStatNew, compressStatRepeat);
+            stringCompressor.clear();
+            //compressStatNew = compressStatRepeat = 0;
         }
         log.trace("Loader closed");
     }

@@ -6,9 +6,14 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.FileTime;
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 import repairencoding.types.TFile;
+import repairencoding.types.TUtil;
 
 /**
  * Load files from path
@@ -17,6 +22,7 @@ public class FileLoader extends ALoader{
     Path source;
 
     public FileLoader(Path source) {
+        super(true, TUtil.MT_THREAD_COUNT>1);
         this.source = source;
     }
     
@@ -56,10 +62,36 @@ public class FileLoader extends ALoader{
         log.debug("Found {} files in folder \"{}\"", files.size(), source);
         log.trace("File sequence: {}", files);
         List<TFile> out=new ArrayList<>();
-        for (Path f:files) {
-            FileTime t=Files.getLastModifiedTime(f);
-            String name = f.toFile().getName();
-            out.add(this.readFile(name, t.toMillis(), ()->Files.newInputStream(f)));
+        if (TUtil.MT_THREAD_COUNT<=1) {
+            for (Path f:files) {
+                FileTime t=Files.getLastModifiedTime(f);
+                String name = f.toFile().getName();
+                out.add(this.readFile(name, t.toMillis(), ()->Files.newInputStream(f)));
+            }
+        } else {
+            log.debug("Loading with {} thread", TUtil.MT_THREAD_COUNT);
+            ExecutorService executor = TUtil.newExecutor("File_loader", files.size());
+            try {
+                List<Future<TFile>> wait=new LinkedList<>();
+                for (Path f:files) {
+                    wait.add(executor.submit(()-> {
+                        FileTime t=Files.getLastModifiedTime(f);
+                        String name = f.toFile().getName();
+                        return readFile(name, t.toMillis(), ()->Files.newInputStream(f));
+                    }));
+                }
+                try {
+                for (Future<TFile> tf:wait)
+                        out.add(tf.get());
+                } catch (InterruptedException ex) {
+                    Thread.currentThread().interrupt();
+                } catch (ExecutionException ex) {
+                    log.error("Error at multithread loading: {}", ex.toString());
+                    throw new IOException(ex.getCause());
+                }
+            } finally {
+                executor.shutdownNow();
+            }
         }
         return out;
     }

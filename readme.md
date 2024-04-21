@@ -13,7 +13,27 @@ You can search true text in GIT history. But when you have a large text file wit
 Usage
 -----
 
-    java -Xmx200m -Dorg.slf4j.simpleLogger.defaultLogLevel=debug -jar git-repair-encoding.jar path_with_text_files
+    java -Xmx160m -Dorg.slf4j.simpleLogger.defaultLogLevel=debug -jar git-repair-encoding.jar path_with_text_files
+
+For large number of history text files you can use all of CPU cores: with --thread=-1
+
+    @ use all available CPU
+    java -jar git-repair-encoding.jar --thread=-1 path_with_text_files
+
+    #for use 2 thread:
+    java -Xmx300m -jar git-repair-encoding.jar --thread=2 path_with_text_files
+    
+Parameters 1:
+
+* -Xmx300m - standart Java configuration memory limit. You may ignore it.
+* -Dorg.slf4j.simpleLogger.defaultLogLevel=debug  - log level (using slf4j library). Levels: trace,debug,info,warn,error. Default level: info. You may ignore it, but for debug recomended use debug or trace level.
+
+Parameters 2:
+
+* --thread=2 - optional, using thread count for porcess file. If number is negative or 0 - will be use all available CPU core. Default 1 (no multithread). Argument format: "--thread=4" or "--thread 4"
+* path_with_text_files - the path with only text files, ordered by name as itshould be linked.
+
+Note: multithreading efective only with special case. In small samples this implementation take zero perfomance improvement and more hot CPU only. It should be nice when cold weather.
 
 Program will scan all files from path_with_text_files, ordered by modify time.
 Compare files between.
