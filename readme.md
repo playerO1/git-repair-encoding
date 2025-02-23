@@ -1,7 +1,7 @@
-GIT repair broken encoding
+Repair broken encoding
 ==========================
 
-This project should help to repair broken text files by GIT history.
+This project should help to repair broken text files by GIT history or previous version of file.
 
 Sometime, when developer using different text editor, he can convert file to any encoding. After merge file it can be merge with other encoding version. That should do broren same symbols. After long time we can found that any lines on text files with special charactters may be broken many commit's ago.
 
@@ -9,8 +9,37 @@ You can search true text in GIT history. But when you have a large text file wit
 
 *Please, don't do this: "Tap-tap and go to product!".*
 
+This project contains Java version and Python version of program. Recomended use Python script `renc4.py` cause it better new version.
 
-Usage
+
+Python version
+==============
+
+Use python3. 
+Start command:
+
+> python3 renc4.py old_version.txt latest_broken_version.txt [encoding 1] [encoding 2]
+
+This command make result file `latest_broken_version.txt_out.txt`.
+
+Example:
+
+    python renc4.py orig.txt broken.txt utf8 utf8
+
+Repair alhorithm
+----------------
+0. input: lines1,lines2
+1. for all line in lines2 with broken character (set E)
+2. search in lines1 unbreaking block of 7 (or window size by W) lines matching of block in lines2 near repair line number. Lines are same if length is same and all symbols, except sumpol on position with symbols in set E is same.
+3. if line in line1 is not a broken and only one window of lines is same (not exist another match block) then copy this line into lines2.
+
+    
+
+Java version of git-repair-broken-encoding
+==========================================
+
+
+Usage of Java version
 -----
 
     java -Xmx160m -Dorg.slf4j.simpleLogger.defaultLogLevel=debug -jar git-repair-encoding.jar path_with_text_files
@@ -128,8 +157,9 @@ Special class for:
 * engine.DiffVisualization  - show diff data in HTML form, for debug
 * engine.RepairEngine       - repair broken lines, using after CompareEngine.
 
+
 License
 --------
-(C) 2024 Author Alexey K (github.com/PlayerO1).
+(C) 2024, 2025 Author Alexey K (github.com/PlayerO1).
 
 License GNU GPL 3.
